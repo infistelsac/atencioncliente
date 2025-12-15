@@ -1,7 +1,7 @@
 services:
   - type: static
     name: infistel-atencion-cliente
-    repo: https://github.com/your-user/your-repo # Render will use the connected repo
+    repo: https://github.com/infistelsac/atencioncliente # Render will use the connected repo
     buildCommand: npm install && npm run build
     publishDir: dist
     envVars:
@@ -9,3 +9,7 @@ services:
         sync: false
       - key: VITE_FIREBASE_CONFIG
         sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
