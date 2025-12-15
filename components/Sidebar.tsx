@@ -8,9 +8,10 @@ interface SidebarProps {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
   badges?: Record<string, number>;
+  onLogout: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isDarkMode, toggleDarkMode, badges }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isDarkMode, toggleDarkMode, badges, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'chat', label: 'Chats Clientes', icon: MessageSquare },
@@ -81,7 +82,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isDarkMode
           </span>
         </button>
 
-        <button className="w-full flex items-center gap-3 px-3 py-3 text-red-400 hover:bg-slate-800 rounded-xl transition-colors">
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center gap-3 px-3 py-3 text-red-400 hover:bg-slate-800 rounded-xl transition-colors"
+        >
           <LogOut size={20} />
           <span className="hidden lg:block font-medium">Cerrar Sesión</span>
         </button>

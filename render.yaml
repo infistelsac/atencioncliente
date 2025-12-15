@@ -1,15 +1,12 @@
 services:
-  - type: static
+  - type: web
     name: infistel-atencion-cliente
     repo: https://github.com/infistelsac/atencioncliente # Render will use the connected repo
+    env: node
     buildCommand: npm install && npm run build
-    publishDir: dist
+    startCommand: npm start
     envVars:
       - key: GEMINI_API_KEY
         sync: false
       - key: VITE_FIREBASE_CONFIG
         sync: false
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html

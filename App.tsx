@@ -9,6 +9,7 @@ import TeamChat from './components/TeamChat';
 import CampaignManager from './components/CampaignManager';
 import VisitScheduler from './components/VisitScheduler';
 import TicketsModule, { Ticket, ADMIN_MOCK_TICKETS } from './components/TicketsModule';
+import Login from './components/Login';
 import { View, Agent, AgentStatus, DashboardStats, Conversation, MessageType, Contact, Group } from './types';
 import { GroupManager } from './components/GroupManager';
 import { Phone, Video, Mic, MicOff, VideoOff, X } from 'lucide-react';
@@ -133,6 +134,7 @@ const CallOverlay: React.FC<{
 // --- MAIN APP COMPONENT ---
 
 const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>(MOCK_CONVERSATIONS);
@@ -141,6 +143,25 @@ const App: React.FC = () => {
   const [contacts, setContacts] = useState<Contact[]>(MOCK_CONTACTS);
   const [groups, setGroups] = useState<Group[]>([]);
   const [badges, setBadges] = useState<Record<string, number>>({});
+
+  // Auth Check
+  useEffect(() => {
+    const token = localStorage.getItem('infistel_auth_token');
+    if (token) {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleLogin = () => {
+    localStorage.setItem('infistel_auth_token', 'demo-token-' + Date.now());
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('infistel_auth_token');
+    setIsAuthenticated(false);
+    setCurrentView('dashboard'); // Reset view on logout
+  };
 
   // Badge Logic
   useEffect(() => {
@@ -419,6 +440,10 @@ const App: React.FC = () => {
     }
   };
 
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />;
+  }
+
   return (
     <div className={`flex h-screen ${isDarkMode ? 'dark' : ''} bg-gray-100 dark:bg-gray-900 transition-colors duration-200 font-sans`}>
       <CallOverlay
@@ -435,6 +460,7 @@ const App: React.FC = () => {
         isDarkMode={isDarkMode}
         toggleDarkMode={toggleDarkMode}
         badges={badges}
+        onLogout={handleLogout}
       />
 
       <main className="flex-1 h-full overflow-hidden relative">
