@@ -39,6 +39,7 @@ Es crucial configurar las siguientes variables en la sección "Environment" de t
 
 ### Obligatorias:
 *   **`GEMINI_API_KEY`**: Tu clave API de Google Gemini.
+*   **`META_VERIFY_TOKEN`**: Token de verificación para el Webhook (por defecto es `infistel_token_secure`).
 
 ### Opcionales:
 *   **`VITE_FIREBASE_CONFIG`**: JSON de configuración de Firebase si deseas persistencia real.
