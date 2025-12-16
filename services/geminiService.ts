@@ -1,13 +1,23 @@
+/// <reference types="vite/client" />
 import { GoogleGenAI } from "@google/genai";
 import { Message } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper to get the AI client with the current key (Env or LocalStorage)
+const getGenAI = () => {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('gemini_api_key') || "";
+  return apiKey ? new GoogleGenAI({ apiKey }) : null;
+};
 
 /**
  * Helper to handle API errors gracefully and provide user-friendly feedback.
  */
 const handleApiError = (error: any, context: string): string => {
   console.error(`Error in ${context}:`, error);
+
+  // Check if it's a missing key error (if we passed null client, though we usually check before)
+  if (!getGenAI()) {
+    return "⚠️ API Key de Gemini no configurada. Ve a Configuración > IA o revisa tu .env.local.";
+  }
 
   let errorMessage = '';
 
@@ -16,7 +26,6 @@ const handleApiError = (error: any, context: string): string => {
   } else if (error instanceof Error) {
     errorMessage = error.message;
   } else if (typeof error === 'object') {
-    // Try to stringify if it's a plain object to check for content keys like "message" or "status"
     try {
       errorMessage = JSON.stringify(error);
     } catch (e) {
@@ -24,7 +33,6 @@ const handleApiError = (error: any, context: string): string => {
     }
   }
 
-  // Check for 429 (Too Many Requests / Quota Exceeded)
   if (
     errorMessage.includes('429') ||
     errorMessage.includes('RESOURCE_EXHAUSTED') ||
@@ -36,7 +44,6 @@ const handleApiError = (error: any, context: string): string => {
     return "⚠️ Sistema sobrecargado (Cuota de IA excedida). Intenta en unos minutos.";
   }
 
-  // Check for 5xx Server Errors
   if (errorMessage.includes('503') || errorMessage.includes('500') || errorMessage.includes('Overloaded')) {
     return "⚠️ Servicio de IA temporalmente no disponible.";
   }
@@ -46,12 +53,12 @@ const handleApiError = (error: any, context: string): string => {
 
 /**
  * Generates suggested responses for a support agent based on the conversation history.
- * Returns an array of options (Formal, Casual, Short).
  */
 export const getSuggestedReply = async (customerName: string, lastMessages: Message[]): Promise<string[]> => {
+  const ai = getGenAI();
+  if (!ai) return ["⚠️ Configura tu API Key en Configuración > IA."];
+
   try {
-    // Format history for the model
-    // We limit context to the last 2 messages to conserve tokens
     const historyText = lastMessages
       .slice(-2)
       .map(m => `${m.senderId === 'customer' ? 'Cliente' : 'Agente'}: ${m.text}`)
@@ -72,18 +79,14 @@ export const getSuggestedReply = async (customerName: string, lastMessages: Mess
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       contents: prompt,
     });
 
     const text = response.text || "";
-
-    // Split by the delimiter and filter out empty strings
     const suggestions = text.split('|||').map(s => s.trim()).filter(s => s.length > 0);
 
-    // Fallback if split fails or model ignores instruction
     if (suggestions.length === 0) return [text];
-
     return suggestions;
 
   } catch (error) {
@@ -100,9 +103,12 @@ export const draftResponse = async (
   lastMessages: Message[],
   instruction: string
 ): Promise<string> => {
+  const ai = getGenAI();
+  if (!ai) return "⚠️ Configura tu API Key en Configuración > IA.";
+
   try {
     const historyText = lastMessages
-      .slice(-3) // Slightly more context for specific drafting
+      .slice(-3)
       .map(m => `${m.senderId === 'customer' ? 'Cliente' : 'Agente'}: ${m.text}`)
       .join('\n');
 
@@ -118,7 +124,7 @@ export const draftResponse = async (
       `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       contents: prompt,
     });
 
@@ -132,19 +138,21 @@ export const draftResponse = async (
  * Summarizes a conversation for administrative review.
  */
 export const summarizeConversation = async (messages: Message[]): Promise<string> => {
+  const ai = getGenAI();
+  if (!ai) return "⚠️ Configura tu API Key en Configuración > IA.";
+
   try {
-    // Limit to last 5 messages for summary to save tokens
     const textContent = messages
       .slice(-5)
       .map(m => `${m.senderId === 'customer' ? 'C' : 'A'}: ${m.text}`)
       .join('\n');
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       contents: `Resume en 3 puntos breves (Problema, Acción, Estado):\n${textContent}`,
     });
 
-    return response.text;
+    return response.text || "No se pudo generar el resumen.";
   } catch (error) {
     return handleApiError(error, "Gemini Summary");
   }
