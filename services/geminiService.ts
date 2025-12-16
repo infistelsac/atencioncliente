@@ -1,11 +1,46 @@
 /// <reference types="vite/client" />
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Message } from "../types";
 
 // Helper to get the AI client with the current key (Env or LocalStorage)
 const getGenAI = () => {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('gemini_api_key') || "";
-  return apiKey ? new GoogleGenAI({ apiKey }) : null;
+  return apiKey ? new GoogleGenerativeAI(apiKey) : null;
+};
+
+/**
+ * Helper to try multiple models in case of 404 (Model Not Found) or other transient errors.
+ */
+const generateWithFallback = async (prompt: string): Promise<string> => {
+  const genAI = getGenAI();
+  if (!genAI) throw new Error("API Key no configurada");
+
+  // List of models to try. Prioritize latest experimental (Gemini 2.0), then stable 1.5.
+  const models = ['gemini-2.5-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro'];
+
+  let lastError: any = null;
+
+  for (const modelName of models) {
+    try {
+      console.log(`Intentando generar con modelo: ${modelName}`);
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      return response.text() || "";
+    } catch (error: any) {
+      console.warn(`Fallo con modelo ${modelName}:`, error.message || error);
+      lastError = error;
+
+      const errorStr = String(error.message || JSON.stringify(error));
+
+      // Stop checking if it's an API Key or Auth error (400/403)
+      if (errorStr.includes('API key') || errorStr.includes('403') || errorStr.includes('invalid')) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError || new Error("No se pudo generar contenido con ningún modelo disponible.");
 };
 
 /**
@@ -14,49 +49,57 @@ const getGenAI = () => {
 const handleApiError = (error: any, context: string): string => {
   console.error(`Error in ${context}:`, error);
 
-  // Check if it's a missing key error (if we passed null client, though we usually check before)
   if (!getGenAI()) {
-    return "⚠️ API Key de Gemini no configurada. Ve a Configuración > IA o revisa tu .env.local.";
+    return "⚠️ API Key de Gemini no configurada. Ve a Configuración > IA.";
   }
 
   let errorMessage = '';
 
-  if (typeof error === 'string') {
-    errorMessage = error;
-  } else if (error instanceof Error) {
+  if (error instanceof Error) {
     errorMessage = error.message;
-  } else if (typeof error === 'object') {
+  } else if (typeof error === 'string') {
+    errorMessage = error;
+  } else {
     try {
       errorMessage = JSON.stringify(error);
+      if (errorMessage === '{}') errorMessage = String(error);
     } catch (e) {
       errorMessage = String(error);
     }
   }
 
+  if (errorMessage.includes('400') || errorMessage.includes('API key not valid')) {
+    return "⚠️ API Key inválida. Verifica tu configuración en Ajustes.";
+  }
+
+  if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+    return "⚠️ Modelo de IA no disponible. Verifica que tu API Key tenga permisos en Google AI Studio.";
+  }
+
   if (
     errorMessage.includes('429') ||
     errorMessage.includes('RESOURCE_EXHAUSTED') ||
-    errorMessage.includes('Quota') ||
-    error?.status === 429 ||
-    error?.code === 429 ||
-    error?.error?.code === 429
+    errorMessage.includes('Quota')
   ) {
-    return "⚠️ Sistema sobrecargado (Cuota de IA excedida). Intenta en unos minutos.";
+    return "⚠️ Cuota de IA excedida. Intenta más tarde.";
   }
 
-  if (errorMessage.includes('503') || errorMessage.includes('500') || errorMessage.includes('Overloaded')) {
-    return "⚠️ Servicio de IA temporalmente no disponible.";
+  if (errorMessage.includes('503') || errorMessage.includes('Overloaded')) {
+    return "⚠️ Servicio de IA saturado. Intenta de nuevo.";
   }
 
-  return "⚠️ No se pudo generar la respuesta. Por favor intenta de nuevo.";
+  if (errorMessage.includes('fetch failed')) {
+    return "⚠️ Error de conexión. Revisa tu internet.";
+  }
+
+  return `⚠️ Error: ${errorMessage.substring(0, 100)}...`;
 };
 
 /**
  * Generates suggested responses for a support agent based on the conversation history.
  */
 export const getSuggestedReply = async (customerName: string, lastMessages: Message[]): Promise<string[]> => {
-  const ai = getGenAI();
-  if (!ai) return ["⚠️ Configura tu API Key en Configuración > IA."];
+  if (!getGenAI()) return ["⚠️ Configura tu API Key en Configuración > IA."];
 
   try {
     const historyText = lastMessages
@@ -78,12 +121,9 @@ export const getSuggestedReply = async (customerName: string, lastMessages: Mess
       Ejemplo: Hola, lamento el problema...|||Entendido, revisaré ahora...|||Por favor dame tu ID...
     `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: prompt,
-    });
+    // Use fallback helper
+    const text = await generateWithFallback(prompt);
 
-    const text = response.text || "";
     const suggestions = text.split('|||').map(s => s.trim()).filter(s => s.length > 0);
 
     if (suggestions.length === 0) return [text];
@@ -103,8 +143,7 @@ export const draftResponse = async (
   lastMessages: Message[],
   instruction: string
 ): Promise<string> => {
-  const ai = getGenAI();
-  if (!ai) return "⚠️ Configura tu API Key en Configuración > IA.";
+  if (!getGenAI()) return "⚠️ Configura tu API Key en Configuración > IA.";
 
   try {
     const historyText = lastMessages
@@ -123,12 +162,9 @@ export const draftResponse = async (
         La respuesta debe ser profesional, lista para enviar y en el idioma de la conversación. No incluyas explicaciones, solo el texto del mensaje.
       `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: prompt,
-    });
-
-    return response.text?.trim() || "No pude generar el borrador.";
+    // Use fallback helper
+    const text = await generateWithFallback(prompt);
+    return text.trim() || "No pude generar el borrador.";
   } catch (error) {
     return handleApiError(error, "Gemini Draft");
   }
@@ -138,8 +174,7 @@ export const draftResponse = async (
  * Summarizes a conversation for administrative review.
  */
 export const summarizeConversation = async (messages: Message[]): Promise<string> => {
-  const ai = getGenAI();
-  if (!ai) return "⚠️ Configura tu API Key en Configuración > IA.";
+  if (!getGenAI()) return "⚠️ Configura tu API Key en Configuración > IA.";
 
   try {
     const textContent = messages
@@ -147,13 +182,32 @@ export const summarizeConversation = async (messages: Message[]): Promise<string
       .map(m => `${m.senderId === 'customer' ? 'C' : 'A'}: ${m.text}`)
       .join('\n');
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: `Resume en 3 puntos breves (Problema, Acción, Estado):\n${textContent}`,
-    });
-
-    return response.text || "No se pudo generar el resumen.";
+    // Use fallback helper
+    const text = await generateWithFallback(`Resume en 3 puntos breves (Problema, Acción, Estado):\n${textContent}`);
+    return text || "No se pudo generar el resumen.";
   } catch (error) {
     return handleApiError(error, "Gemini Summary");
+  }
+};
+
+/**
+ * Simple test to verify if the API Key and Model are working.
+ */
+export const testConnection = async (): Promise<{ success: boolean; message: string }> => {
+  const genAI = getGenAI();
+  if (!genAI) return { success: false, message: "API Key no configurada." };
+
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const result = await model.generateContent("Hello check");
+    const response = await result.response;
+    const text = response.text();
+    return { success: true, message: "¡Conexión exitosa! Gemini está respondiendo." };
+  } catch (error: any) {
+    console.error("Test Connection Error:", error);
+    return {
+      success: false,
+      message: handleApiError(error, "Test Connection")
+    };
   }
 };

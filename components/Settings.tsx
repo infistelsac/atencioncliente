@@ -277,6 +277,19 @@ const Settings: React.FC = () => {
                                         </div>
                                     </div>
                                     <p className="mt-1 text-xs text-gray-500">Obtén tu API Key gratis en <a href="https://aistudio.google.com/" target="_blank" className="text-purple-600 hover:underline">Google AI Studio</a>.</p>
+
+                                    <div className="mt-2">
+                                        <button
+                                            onClick={async () => {
+                                                const { testConnection } = await import('../services/geminiService');
+                                                const result = await testConnection();
+                                                alert(result.message);
+                                            }}
+                                            className="text-xs text-purple-600 hover:text-purple-700 font-medium underline"
+                                        >
+                                            Probar conexión con Google Gemini
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
