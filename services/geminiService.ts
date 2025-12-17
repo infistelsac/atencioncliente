@@ -16,7 +16,7 @@ const generateWithFallback = async (prompt: string): Promise<string> => {
   if (!genAI) throw new Error("API Key no configurada");
 
   // List of models to try. Prioritize latest experimental (Gemini 2.0), then stable 1.5.
-  const models = ['gemini-2.5-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro'];
+  const models = ['gemini-2.5-flash'];
 
   let lastError: any = null;
 
