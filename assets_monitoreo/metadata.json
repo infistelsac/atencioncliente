@@ -1,0 +1,5 @@
+{
+  "name": "NetVision Pro - MikroTik & TP-Link Monitor",
+  "description": "A high-performance network monitoring dashboard for tracking MikroTik access nodes and TP-Link client devices, featuring real-time status visualizations and AI-driven diagnostics.",
+  "requestFramePermissions": []
+}

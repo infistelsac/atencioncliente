@@ -211,3 +211,53 @@ export const testConnection = async (): Promise<{ success: boolean; message: str
     };
   }
 };
+
+export async function analyzeNetworkIssue(device: any, allDevices: any[]) {
+  const genAI = getGenAI();
+  if (!genAI) return "⚠️ API Key no configurada.";
+
+  const modelName = 'gemini-2.0-flash'; // Using a stable model available in the project context or consistent with others
+
+  const isInfra = device.type !== 'CPE_TPLINK' && device.type !== 'PASSIVE_ODF'; // Adapted types, checking string literals or importing enum if possible. But better to keep it generic or import types.
+  // Actually, I should import types or just use loose typing 'any' to avoid circular dependency if types are in another file. 
+  // But wait, services/geminiService.ts imports `Message` from `../types`.
+  // I should update `../types` (root types.ts) to include `NetworkDevice` etc if I want strictly typed.
+  // For now, let's cast or use any to be safe and quick, matching the logic.
+
+  const isFault = device.status === 'FAULT' || device.status === 'OFFLINE';
+
+  const systemInstruction = `Eres un Arquitecto de Redes Senior ISP experto en MikroTik y topologías FTTH.
+  Tu prioridad absoluta es diferenciar fallos de sector (infraestructura) de incidencias locales (CPE cliente).
+  
+  Lógica de Análisis:
+  1. Si falla un CORE, SWITCH o OLT, es un CORTE DE SECTOR. Debes advertir sobre el impacto masivo de usuarios offline.
+  2. Si falla un CPE TP-LINK, es una AVERÍA LOCAL. Analiza la señal (si es posible) o el estado administrativo.
+  3. Proporciona comandos específicos de RouterOS (/interface, /ip, /system) para diagnóstico rápido.
+  
+  Responde siempre en español técnico, directo y orientado a la resolución rápida del NOC.`;
+
+  const context = `Dispositivo: ${device.name} (${device.type})
+  Modelo: ${device.model} | IP: ${device.ip}
+  Estado actual: ${device.status}
+  Impacto detectado: ${isInfra && isFault ? "ALTO - CORTE DE SECTOR MASIVO" : "NORMAL - INCIDENCIA INDIVIDUAL"}`;
+
+  const prompt = `${context}
+  
+  Analiza este escenario y proporciona:
+  1. Diagnóstico de Capa Física/Lógica.
+  2. Comandos MikroTik sugeridos para validar conectividad.
+  3. Plan de acción inmediato para el técnico en campo.`;
+
+  try {
+    const model = genAI.getGenerativeModel({
+      model: modelName,
+      systemInstruction: systemInstruction
+    });
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    return handleApiError(error, "Monitoring Analysis");
+  }
+}

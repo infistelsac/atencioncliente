@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from '../types';
-import { LayoutDashboard, MessageSquare, Users, Settings, LogOut, Moon, Sun, BookUser, Hash, Megaphone, Truck, Ticket, Globe } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, Users, Settings, LogOut, Moon, Sun, BookUser, Hash, Megaphone, Truck, Ticket, Globe, Activity } from 'lucide-react';
 
 interface SidebarProps {
   currentView: View;
@@ -22,6 +22,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isDarkMode
     { id: 'contacts', label: 'Contactos', icon: BookUser },
     { id: 'contact-groups', label: 'Grupos de Contactos', icon: Users },
     { id: 'agents', label: 'Agentes/Técnicos', icon: Users },
+    { id: 'monitoring', label: 'Monitor de Red ISP', icon: Activity },
     { id: 'settings', label: 'Configuración', icon: Settings },
   ];
 

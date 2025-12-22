@@ -61,6 +61,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     scrollToBottom();
   }, [activeConversation?.messages]);
 
+  // Reset input and UI states when switching conversations
+  useEffect(() => {
+    setInputText('');
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setShowDraftInput(false);
+    setShowEmojiPicker(false);
+    setShowAttachMenu(false);
+    setEditingMessageId(null);
+    setEditText('');
+  }, [activeConversationId]);
+
   // Debounced Auto-Suggestion Effect
   useEffect(() => {
     if (!isAutoSuggestEnabled || !inputText.trim() || !activeConversation || showDraftInput || editingMessageId) {
@@ -609,8 +621,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <button
                 onClick={() => handleSendMessage()}
                 className={`p-2 rounded-full transition-colors flex items-center justify-center ${inputText.trim()
-                    ? 'bg-green-500 text-white hover:bg-green-600 shadow-md'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                  ? 'bg-green-500 text-white hover:bg-green-600 shadow-md'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                   }`}
                 disabled={!inputText.trim()}
               >

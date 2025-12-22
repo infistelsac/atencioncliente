@@ -1,4 +1,4 @@
-export type View = 'dashboard' | 'chat' | 'visits' | 'campaigns' | 'team-chat' | 'tickets' | 'contacts' | 'contact-groups' | 'agents' | 'settings';
+export type View = 'dashboard' | 'chat' | 'visits' | 'campaigns' | 'team-chat' | 'tickets' | 'contacts' | 'contact-groups' | 'agents' | 'settings' | 'monitoring';
 
 export enum MessageType {
   TEXT = 'text',

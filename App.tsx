@@ -9,6 +9,7 @@ import TeamChat from './components/TeamChat';
 import CampaignManager from './components/CampaignManager';
 import VisitScheduler from './components/VisitScheduler';
 import TicketsModule, { Ticket, ADMIN_MOCK_TICKETS } from './components/TicketsModule';
+import MonitoringDashboard from './components/monitoring/MonitoringDashboard';
 import Login from './components/Login';
 import { View, Agent, AgentStatus, DashboardStats, Conversation, MessageType, Contact, Group } from './types';
 import { GroupManager } from './components/GroupManager';
@@ -435,6 +436,8 @@ const App: React.FC = () => {
         return <CampaignManager />;
       case 'settings':
         return <Settings />;
+      case 'monitoring':
+        return <MonitoringDashboard />;
       default:
         return <Dashboard stats={MOCK_STATS} />;
     }

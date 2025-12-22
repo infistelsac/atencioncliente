@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Smartphone, Bell, Lock, HelpCircle, LogOut, RefreshCw, CheckCircle, QrCode, Monitor, MessageCircle, Mail, Instagram, Facebook, Cloud, Users, Sparkles, Bot, Key } from 'lucide-react';
+import { Smartphone, Bell, Lock, HelpCircle, LogOut, RefreshCw, CheckCircle, QrCode, Monitor, MessageCircle, Mail, Instagram, Facebook, Cloud, Users, Sparkles, Bot, Key, Loader2 } from 'lucide-react';
 
 const Settings: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'general' | 'whatsapp' | 'ai'>('whatsapp');
@@ -15,6 +15,8 @@ const Settings: React.FC = () => {
     // AI API State
     const [aiApiKey, setAiApiKey] = useState('');
     const [isAiSaved, setIsAiSaved] = useState(false);
+    const [isTestingConnection, setIsTestingConnection] = useState(false);
+    const [connectionTestResult, setConnectionTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
     useEffect(() => {
         // Load AI Key from local storage on mount
@@ -281,14 +283,31 @@ const Settings: React.FC = () => {
                                     <div className="mt-2">
                                         <button
                                             onClick={async () => {
-                                                const { testConnection } = await import('../services/geminiService');
-                                                const result = await testConnection();
-                                                alert(result.message);
+                                                setIsTestingConnection(true);
+                                                setConnectionTestResult(null);
+                                                try {
+                                                    const { testConnection } = await import('../services/geminiService');
+                                                    const result = await testConnection();
+                                                    setConnectionTestResult(result);
+                                                } catch (error) {
+                                                    setConnectionTestResult({ success: false, message: "Error inesperado al probar conexión." });
+                                                } finally {
+                                                    setIsTestingConnection(false);
+                                                }
                                             }}
-                                            className="text-xs text-purple-600 hover:text-purple-700 font-medium underline"
+                                            disabled={isTestingConnection}
+                                            className="text-xs text-purple-600 hover:text-purple-700 font-medium underline flex items-center gap-2 disabled:opacity-50"
                                         >
-                                            Probar conexión con Google Gemini
+                                            {isTestingConnection && <Loader2 size={14} className="animate-spin" />}
+                                            {isTestingConnection ? 'Probando...' : 'Probar conexión con Google Gemini'}
                                         </button>
+
+                                        {connectionTestResult && (
+                                            <div className={`mt-2 text-xs p-3 rounded-lg flex items-start gap-2 ${connectionTestResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                                                {connectionTestResult.success ? <CheckCircle size={14} className="mt-0.5 shrink-0" /> : <HelpCircle size={14} className="mt-0.5 shrink-0" />}
+                                                <span>{connectionTestResult.message}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
