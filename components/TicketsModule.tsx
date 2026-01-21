@@ -6,43 +6,11 @@ import {
   Save, Globe, Camera, Paperclip, X, RefreshCw, History, Mail, Map,
   MessageCircle, Send, PlusCircle, Calendar, Filter
 } from 'lucide-react';
-import { initializeApp } from 'firebase/app';
-import {
-  getAuth,
-  signInAnonymously,
-  onAuthStateChanged,
-  signInWithCustomToken,
-  User as FirebaseUser
-} from 'firebase/auth';
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  onSnapshot,
-  serverTimestamp,
-  doc,
-  updateDoc
-} from 'firebase/firestore';
+import { databaseService } from '../services/databaseService';
+import { db, auth, appId } from '../services/firebase';
+import { User as FirebaseUser } from 'firebase/auth';
 
-// --- CONFIGURACIÓN DE FIREBASE ---
-// --- CONFIGURACIÓN DE FIREBASE ---
-const firebaseConfig = (window as any).__firebase_config ? JSON.parse((window as any).__firebase_config) : null;
-
-let app = null;
-let auth = null;
-let db = null;
-
-if (firebaseConfig && firebaseConfig.apiKey) {
-  try {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
-  } catch (error) {
-    console.error("Error initializing Firebase:", error);
-  }
-}
-
-const appId = typeof window !== 'undefined' && (window as any).__app_id ? (window as any).__app_id : 'infistel-app';
+// Firebase and appId are now imported from services/firebase
 
 // --- CONFIGURACIÓN DE NEGOCIO ---
 const CENTRAL_EMAIL = 'internet@infistel.pe';
@@ -181,23 +149,22 @@ export default function TicketsModule({ onTicketCreated, onSendTicketToChat, onV
     const initAuth = async () => {
       try {
         if ((window as any).__initial_auth_token) {
-          await signInWithCustomToken(auth, (window as any).__initial_auth_token);
+          await (auth as any).signInWithCustomToken((window as any).__initial_auth_token);
         } else {
-          await signInAnonymously(auth);
+          await (auth as any).signInAnonymously();
         }
       } catch (error) {
         console.error("Auth error:", error);
       }
     };
     initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
+    const unsubscribe = auth.onAuthStateChanged(setUser);
     return () => unsubscribe();
   }, []);
 
   // --- 2. CARGA DE DATOS (Misma colección pública que el cliente) ---
   useEffect(() => {
-    // Si no hay configuración de Firebase/Auth, usamos los mocks
-    if (!firebaseConfig?.apiKey || !db) {
+    if (!db) {
       const combined = [...ADMIN_MOCK_TICKETS];
       combined.sort((a, b) => {
         const timeA = a.createdAt?.seconds ?? (a.createdAt === null ? Date.now() / 1000 : 0);
@@ -211,26 +178,15 @@ export default function TicketsModule({ onTicketCreated, onSendTicketToChat, onV
 
     if (!user) return;
 
-    // Conectamos a la colección pública donde los clientes dejan sus tickets
-    const q = collection(db, 'artifacts', appId, 'public', 'data', 'tickets');
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const realTickets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Ticket[];
-
-      // Combinamos con Mocks para la demo
+    const unsubscribe = databaseService.listen('tickets', (realTickets) => {
       const combined = [...realTickets, ...ADMIN_MOCK_TICKETS];
-      combined.sort((a, b) => {
+      combined.sort((a: any, b: any) => {
         const timeA = a.createdAt?.seconds ?? (a.createdAt === null ? Date.now() / 1000 : 0);
         const timeB = b.createdAt?.seconds ?? (b.createdAt === null ? Date.now() / 1000 : 0);
         return timeB - timeA;
       });
 
       setTickets(combined);
-      setLoading(false);
-    }, (error) => {
-      // Fallback a mocks si hay error (ej: permisos)
-      console.error("Error loaded tickets, checking permissions", error);
-      setTickets(ADMIN_MOCK_TICKETS);
       setLoading(false);
     });
 
@@ -295,8 +251,10 @@ export default function TicketsModule({ onTicketCreated, onSendTicketToChat, onV
     // Firebase Update
     if (!selectedTicket.id.startsWith('mock-') && db) {
       try {
-        const ticketRef = doc(db, 'artifacts', appId, 'public', 'data', 'tickets', selectedTicket.id);
-        await updateDoc(ticketRef, { status: targetStatus as TicketStatus, history: updatedHistory });
+        await databaseService.update('tickets', selectedTicket.id, {
+          status: targetStatus,
+          history: updatedHistory
+        });
       } catch (err) { console.error("Error updating:", err); }
     }
     setAdminNote('');
@@ -317,7 +275,6 @@ export default function TicketsModule({ onTicketCreated, onSendTicketToChat, onV
       ticketNumber: ticketNum,
       createdBy: uid,
       status: 'pendiente',
-      createdAt: serverTimestamp(),
       history: [{ status: 'pendiente', date: new Date().toISOString(), note: 'Generado desde Antigravity (Mesa de Ayuda)' }]
     };
 
@@ -339,7 +296,7 @@ export default function TicketsModule({ onTicketCreated, onSendTicketToChat, onV
     }
 
     // Optimistic UI for Create
-    if (!user || !firebaseConfig?.apiKey || !db) {
+    if (!user || !db) {
       const mockT: Ticket = { ...newTicket, id: `mock-new-${Date.now()}`, createdAt: { seconds: Date.now() / 1000 } };
       setTickets([mockT, ...tickets]);
       setFormData({ customerName: '', dni: '', phone: '', email: '', address: '', serviceId: '', clientCode: '', type: 'averia', description: '' });
@@ -351,7 +308,7 @@ export default function TicketsModule({ onTicketCreated, onSendTicketToChat, onV
 
     try {
       if (db) {
-        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'tickets'), newTicket);
+        await databaseService.add('tickets', newTicket);
       }
       setFormData({ customerName: '', dni: '', phone: '', email: '', address: '', serviceId: '', clientCode: '', type: 'averia', description: '' });
       setShowCreateModal(false);

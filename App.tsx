@@ -15,8 +15,8 @@ import PrivacyPolicy from './components/PrivacyPolicy';
 import { View, Agent, AgentStatus, DashboardStats, Conversation, MessageType, Contact, Group } from './types';
 import { GroupManager } from './components/GroupManager';
 import { Phone, Video, Mic, MicOff, VideoOff, X } from 'lucide-react';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, onSnapshot } from 'firebase/firestore';
+import { databaseService } from './services/databaseService';
+import { db } from './services/firebase';
 
 // --- MOCK DATA RESTORATION ---
 
@@ -146,6 +146,29 @@ const App: React.FC = () => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [badges, setBadges] = useState<Record<string, number>>({});
 
+  // Firestore Listeners
+  useEffect(() => {
+    if (!db) return;
+
+    const unsubContacts = databaseService.listen('contacts', (data) => {
+      if (data.length > 0) setContacts(data);
+    });
+
+    const unsubAgents = databaseService.listen('agents', (data) => {
+      if (data.length > 0) setAgents(data);
+    });
+
+    const unsubConversations = databaseService.listen('conversations', (data) => {
+      if (data.length > 0) setConversations(data);
+    });
+
+    return () => {
+      unsubContacts();
+      unsubAgents();
+      unsubConversations();
+    };
+  }, []);
+
   // Auth Check
   useEffect(() => {
     const token = localStorage.getItem('infistel_auth_token');
@@ -171,47 +194,23 @@ const App: React.FC = () => {
 
   // Badge Logic
   useEffect(() => {
-    const firebaseConfig = (window as any).__firebase_config ? JSON.parse((window as any).__firebase_config) : null;
-    const appId = (window as any).__app_id || 'infistel-app';
-
     const updateBadge = (pendingCount: number) => {
       setBadges(prev => ({ ...prev, tickets: pendingCount }));
     };
 
-    if (!firebaseConfig?.apiKey) {
+    if (!db) {
       const pendingCount = ADMIN_MOCK_TICKETS.filter(t => t.status === 'pendiente').length;
       updateBadge(pendingCount);
       return;
     }
 
-    try {
-      // Re-initialize for listener context (lightweight)
-      const app = initializeApp(firebaseConfig);
-      // Note: In a real app, use a singleton Firebase instance. 
-      // Here we trust standard SDK deduplication or acceptable overhead for this feature.
-      const db = getFirestore(app);
-      const q = collection(db, 'artifacts', appId, 'public', 'data', 'tickets');
+    const unsubscribe = databaseService.listen('tickets', (data) => {
+      const combined = [...data, ...ADMIN_MOCK_TICKETS];
+      const pending = combined.filter((t: any) => t.status === 'pendiente').length;
+      updateBadge(pending);
+    });
 
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const realTickets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Ticket[];
-        const combined = [...realTickets, ...ADMIN_MOCK_TICKETS];
-        // Deduplicate if IDs conflict? Mocks have specific IDs. 
-        // TicketsModule just spreads them. Let's do same.
-
-        const pending = combined.filter(t => t.status === 'pendiente').length;
-        updateBadge(pending);
-      }, (error) => {
-        console.error("Badge listener error:", error);
-        const pendingCount = ADMIN_MOCK_TICKETS.filter(t => t.status === 'pendiente').length;
-        updateBadge(pendingCount);
-      });
-
-      return () => unsubscribe();
-    } catch (err) {
-      console.error("Firebase init error in App:", err);
-      const pendingCount = ADMIN_MOCK_TICKETS.filter(t => t.status === 'pendiente').length;
-      updateBadge(pendingCount);
-    }
+    return () => unsubscribe();
   }, []);
 
   // Chat Badges Logic

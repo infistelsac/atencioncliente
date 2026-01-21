@@ -10,6 +10,8 @@ import SiteCreator from './SiteCreator';
 import SiteEditor from './SiteEditor';
 import DeviceCreator from './DeviceCreator';
 import { NetworkSite } from '../../types/monitoring';
+import { databaseService } from '../../services/databaseService';
+import { db } from '../../services/firebase';
 
 const MonitoringDashboard: React.FC = () => {
     const [devices, setDevices] = useState<NetworkDevice[]>(INITIAL_DEVICES);
@@ -20,9 +22,25 @@ const MonitoringDashboard: React.FC = () => {
     const [expandedListSplitters, setExpandedListSplitters] = useState<Set<string>>(new Set());
     const [viewMode, setViewMode] = useState<'HEALTH' | 'MAP'>('HEALTH');
 
-    // Data sync is handled via localStorage in TopologyMap for this preview
+    // Data sync is handled via Firestore
+    useEffect(() => {
+        if (!db) return;
 
-    // 2. Poll de estadísticas reales desde el servidor
+        const unsubDevices = databaseService.listen('devices', (data) => {
+            if (data.length > 0) setDevices(data);
+        });
+
+        const unsubSites = databaseService.listen('sites', (data) => {
+            if (data.length > 0) setKnownSites(data);
+        });
+
+        return () => {
+            unsubDevices();
+            unsubSites();
+        };
+    }, []);
+
+    // 2. Poll de estadísticas reales desde el servidor (mantenemos esto para integración legacy)
     useEffect(() => {
         const fetchStats = async () => {
             try {
@@ -52,7 +70,7 @@ const MonitoringDashboard: React.FC = () => {
             }
         };
 
-        const timer = setInterval(fetchStats, 5000); // Cada 5 segundos
+        const timer = setInterval(fetchStats, 5000);
         fetchStats();
         return () => clearInterval(timer);
     }, []);
@@ -88,19 +106,27 @@ const MonitoringDashboard: React.FC = () => {
         } : d));
     };
 
-    const handleCreateSite = (name: string, parentId?: string) => {
+    const handleCreateSite = async (name: string, parentId?: string) => {
         const newSite: NetworkSite = { id: `site-${Date.now()}`, name, parentId };
-        setKnownSites(prev => [...prev, newSite]);
+        if (db) {
+            await databaseService.add('sites', newSite);
+        } else {
+            setKnownSites(prev => [...prev, newSite]);
+        }
         setShowSiteCreator(false);
     };
 
-    const handleUpdateSite = (siteId: string, newName: string, parentId?: string) => {
-        setKnownSites(prev => prev.map(s => s.id === siteId ? { ...s, name: newName, parentId } : s));
-        setDevices(prev => prev.map(d => d.siteId === siteId ? { ...d, siteName: newName } : d));
+    const handleUpdateSite = async (siteId: string, newName: string, parentId?: string) => {
+        if (db) {
+            await databaseService.update('sites', siteId, { name: newName, parentId });
+        } else {
+            setKnownSites(prev => prev.map(s => s.id === siteId ? { ...s, name: newName, parentId } : s));
+            setDevices(prev => prev.map(d => d.siteId === siteId ? { ...d, siteName: newName } : d));
+        }
         setEditingSite(null);
     };
 
-    const handleCreateDevice = (deviceData: Partial<NetworkDevice>) => {
+    const handleCreateDevice = async (deviceData: Partial<NetworkDevice>) => {
         const newDevice = {
             ...deviceData,
             status: ConnectionStatus.ONLINE,
@@ -113,14 +139,18 @@ const MonitoringDashboard: React.FC = () => {
             ports: deviceData.ports || []
         } as NetworkDevice;
 
-        // Reconciliar links inmediatamente al crear
         if (newDevice.ports) {
             newDevice.links = newDevice.ports
                 .filter(p => p.connectedToDeviceId)
                 .map(p => p.connectedToDeviceId as string);
         }
 
-        setDevices(prev => [...prev, newDevice]);
+        if (db) {
+            await databaseService.add('devices', newDevice);
+        } else {
+            setDevices(prev => [...prev, newDevice]);
+        }
+
         setShowDeviceCreator(false);
 
         if (newDevice.siteId) {
