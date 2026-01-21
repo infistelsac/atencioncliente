@@ -5,7 +5,8 @@ export enum DeviceType {
   OLT = 'OLT',
   ODF = 'ODF',
   TPLINK = 'TPLINK',
-  GATEWAY = 'GATEWAY'
+  GATEWAY = 'GATEWAY',
+  SPLITTER = 'SPLITTER'
 }
 
 export enum ConnectionStatus {
@@ -24,6 +25,21 @@ export enum PortStatus {
   FAULT = 'FAULT'
 }
 
+export interface PortTemplate {
+  count: number;
+  type: string; // e.g. 'ether', 'sfp', 'wlan'
+  prefix: string; // e.g. 'eth', 'sfp-sfpplus', 'wlan'
+  speed?: string;
+}
+
+export interface DeviceTemplate {
+  model: string;
+  vendor: 'Mikrotik' | 'TP-Link' | 'Generic';
+  type: DeviceType;
+  ports: PortTemplate[];
+  description?: string;
+}
+
 export interface NetworkPort {
   id: string;
   name: string; // e.g., 'eth1', 'sfp-sfpplus1'
@@ -40,6 +56,14 @@ export interface ConnectionCredentials {
   password?: string;
   useSsl: boolean;
   lastSync?: string;
+}
+
+export interface NetworkSite {
+  id: string;
+  name: string;
+  parentId?: string; // Para sub-nodos
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface NetworkDevice {
@@ -62,13 +86,19 @@ export interface NetworkDevice {
   consumedOut?: number;   // MB consumidos Subida
   cpuLoad?: number;
   memoryUsage?: number;
-  links: string[];
+  links: string[]; // Se sincroniza automáticamente con port.connectedToDeviceId
   firmware: string;
   siteId: string;
   siteName: string;
   isReal?: boolean;
   credentials?: ConnectionCredentials;
   ports?: NetworkPort[];
+  // Splitter Specific
+  splitterRatio?: string; // e.g. "1:8"
+  splitterLevel?: number; // e.g. 1, 2
+  latitude?: number;
+  longitude?: number;
+  linkRoutes?: Record<string, { lat: number; lng: number }[]>; // Key: targetId, Value: Waypoints (poles)
 }
 
 export interface NetworkStats {

@@ -3,9 +3,10 @@ import { Globe, Lock, Mail, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 interface LoginProps {
     onLogin: () => void;
+    onViewPrivacy: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
+const Login: React.FC<LoginProps> = ({ onLogin, onViewPrivacy }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -106,10 +107,19 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     </button>
                 </form>
 
-                <div className="mt-8 text-center">
+                <div className="mt-8 text-center space-y-4">
                     <p className="text-slate-500 text-sm">
                         ¿Olvidaste tu contraseña? <a href="#" className="text-blue-400 hover:text-blue-300 hover:underline transition-colors">Contactar soporte</a>
                     </p>
+                    <button
+                        onClick={(e) => {
+                            e.preventDefault();
+                            onViewPrivacy();
+                        }}
+                        className="text-slate-500 text-xs hover:text-slate-400 hover:underline transition-colors"
+                    >
+                        Políticas de Privacidad
+                    </button>
                 </div>
             </div>
         </div>

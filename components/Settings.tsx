@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Smartphone, Bell, Lock, HelpCircle, LogOut, RefreshCw, CheckCircle, QrCode, Monitor, MessageCircle, Mail, Instagram, Facebook, Cloud, Users, Sparkles, Bot, Key, Loader2 } from 'lucide-react';
+import { Smartphone, Bell, Lock, HelpCircle, LogOut, RefreshCw, CheckCircle, QrCode, Monitor, MessageCircle, Mail, Instagram, Facebook, Cloud, Users, Sparkles, Bot, Key, Loader2, Network, Server } from 'lucide-react';
 
 const Settings: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'general' | 'whatsapp' | 'ai'>('whatsapp');
+    const [activeTab, setActiveTab] = useState<'general' | 'whatsapp' | 'ai' | 'mikrotik'>('whatsapp');
 
     // WhatsApp API State
     const [webhookUrl, setWebhookUrl] = useState('https://tu-dominio.com/api/webhook/whatsapp');
@@ -18,10 +18,30 @@ const Settings: React.FC = () => {
     const [isTestingConnection, setIsTestingConnection] = useState(false);
     const [connectionTestResult, setConnectionTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
+    // Mikrotik API State
+    const [mikrotikHost, setMikrotikHost] = useState('');
+    const [mikrotikPort, setMikrotikPort] = useState('8728');
+    const [mikrotikUser, setMikrotikUser] = useState('admin');
+    const [mikrotikPassword, setMikrotikPassword] = useState('');
+    const [isMikrotikSaved, setIsMikrotikSaved] = useState(false);
+    const [isTestingMikrotik, setIsTestingMikrotik] = useState(false);
+    const [mikrotikTestResult, setMikrotikTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
     useEffect(() => {
         // Load AI Key from local storage on mount
         const savedKey = localStorage.getItem('gemini_api_key');
         if (savedKey) setAiApiKey(savedKey);
+
+        // Load Mikrotik config from local storage
+        const savedHost = localStorage.getItem('mikrotik_host');
+        const savedPort = localStorage.getItem('mikrotik_port');
+        const savedUser = localStorage.getItem('mikrotik_user');
+        const savedPass = localStorage.getItem('mikrotik_password');
+
+        if (savedHost) setMikrotikHost(savedHost);
+        if (savedPort) setMikrotikPort(savedPort);
+        if (savedUser) setMikrotikUser(savedUser);
+        if (savedPass) setMikrotikPassword(savedPass);
     }, []);
 
     const handleSaveWhatsAppConfig = () => {
@@ -40,6 +60,16 @@ const Settings: React.FC = () => {
         }
         setIsAiSaved(true);
         setTimeout(() => setIsAiSaved(false), 3000);
+    };
+
+    const handleSaveMikrotikConfig = () => {
+        localStorage.setItem('mikrotik_host', mikrotikHost);
+        localStorage.setItem('mikrotik_port', mikrotikPort);
+        localStorage.setItem('mikrotik_user', mikrotikUser);
+        localStorage.setItem('mikrotik_password', mikrotikPassword);
+
+        setIsMikrotikSaved(true);
+        setTimeout(() => setIsMikrotikSaved(false), 3000);
     };
 
     return (
@@ -71,6 +101,16 @@ const Settings: React.FC = () => {
                         Inteligencia Artificial
                     </div>
                     {activeTab === 'ai' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 dark:bg-purple-400 rounded-t-full"></span>}
+                </button>
+                <button
+                    onClick={() => setActiveTab('mikrotik')}
+                    className={`pb-4 px-2 font-medium text-sm whitespace-nowrap transition-colors relative ${activeTab === 'mikrotik' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                >
+                    <div className="flex items-center gap-2">
+                        <Network size={18} />
+                        API Mikrotik
+                    </div>
+                    {activeTab === 'mikrotik' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full"></span>}
                 </button>
                 <button
                     onClick={() => setActiveTab('general')}
@@ -352,6 +392,141 @@ const Settings: React.FC = () => {
                                         <p className="text-sm text-gray-700 dark:text-gray-300"><strong>Resumen de Conversaciones:</strong> Obtén un resumen ejecutivo de chats largos.</p>
                                     </li>
                                 </ul>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'mikrotik' && (
+                    <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400">
+                                        <Server size={20} />
+                                    </div>
+                                    Conexión API Mikrotik
+                                </h3>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Host / IP del Router</label>
+                                        <input
+                                            type="text"
+                                            value={mikrotikHost}
+                                            onChange={(e) => setMikrotikHost(e.target.value)}
+                                            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                            placeholder="192.168.88.1"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Puerto API</label>
+                                        <input
+                                            type="text"
+                                            value={mikrotikPort}
+                                            onChange={(e) => setMikrotikPort(e.target.value)}
+                                            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                            placeholder="8728"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Usuario</label>
+                                        <input
+                                            type="text"
+                                            value={mikrotikUser}
+                                            onChange={(e) => setMikrotikUser(e.target.value)}
+                                            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                            placeholder="admin"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contraseña</label>
+                                        <input
+                                            type="password"
+                                            value={mikrotikPassword}
+                                            onChange={(e) => setMikrotikPassword(e.target.value)}
+                                            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                            placeholder="••••••••"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="mt-2 text-right">
+                                    <button
+                                        onClick={async () => {
+                                            if (!mikrotikHost) return;
+                                            setIsTestingMikrotik(true);
+                                            setMikrotikTestResult(null);
+                                            try {
+                                                const { testMikrotikConnection } = await import('../services/mikrotikService');
+                                                const result = await testMikrotikConnection({
+                                                    host: mikrotikHost,
+                                                    port: mikrotikPort,
+                                                    user: mikrotikUser,
+                                                    pass: mikrotikPassword
+                                                });
+                                                setMikrotikTestResult(result);
+                                            } catch (error) {
+                                                setMikrotikTestResult({
+                                                    success: false,
+                                                    message: "Error técnico al intentar conectar con el servicio."
+                                                });
+                                            } finally {
+                                                setIsTestingMikrotik(false);
+                                            }
+                                        }}
+                                        disabled={isTestingMikrotik || !mikrotikHost}
+                                        className="text-xs text-indigo-600 hover:text-indigo-700 font-medium underline flex items-center justify-end gap-2 disabled:opacity-50 ml-auto"
+                                    >
+                                        {isTestingMikrotik && <Loader2 size={14} className="animate-spin" />}
+                                        {isTestingMikrotik ? 'Probando...' : 'Probar conexión con Router'}
+                                    </button>
+
+                                    {mikrotikTestResult && (
+                                        <div className={`mt-2 text-left text-xs p-3 rounded-lg flex items-start gap-2 ${mikrotikTestResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                                            {mikrotikTestResult.success ? <CheckCircle size={14} className="mt-0.5 shrink-0" /> : <HelpCircle size={14} className="mt-0.5 shrink-0" />}
+                                            <span>{mikrotikTestResult.message}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                                    <span className={`text-sm font-medium transition-all ${isMikrotikSaved ? 'text-green-600 opacity-100' : 'opacity-0'}`}>
+                                        ¡Configuración guardada!
+                                    </span>
+                                    <button
+                                        onClick={handleSaveMikrotikConfig}
+                                        className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg shadow-indigo-600/20 font-medium transition-all transform active:scale-95 flex items-center gap-2"
+                                    >
+                                        <CheckCircle size={18} />
+                                        Guardar Configuración
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl p-6 border border-indigo-100 dark:border-indigo-800">
+                                <h3 className="text-lg font-bold text-indigo-900 dark:text-indigo-300 mb-4 flex items-center gap-2">
+                                    <HelpCircle size={20} />
+                                    Configuración de Mikrotik
+                                </h3>
+                                <div className="space-y-4 text-sm text-gray-600 dark:text-gray-400">
+                                    <p>Para habilitar el acceso a la API en tu router Mikrotik, asegúrate de:</p>
+                                    <ul className="list-disc list-inside space-y-2">
+                                        <li>Habilitar el servicio API: <code>/ip service enable api</code></li>
+                                        <li>Permitir acceso desde la IP de este servidor.</li>
+                                        <li>Usar un usuario con permisos de lectura para estadísticas.</li>
+                                    </ul>
+                                    <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-indigo-100 dark:border-indigo-800 font-mono text-xs">
+                                        /ip service set api port=8728 disabled=no
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

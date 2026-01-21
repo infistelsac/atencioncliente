@@ -1,5 +1,155 @@
 
-import { DeviceType, ConnectionStatus, NetworkDevice, PortStatus } from '../../types/monitoring';
+import { DeviceType, ConnectionStatus, NetworkDevice, PortStatus, DeviceTemplate } from '../../types/monitoring';
+
+export const DEVICE_TEMPLATES: DeviceTemplate[] = [
+  // MIKROTIK - CORE & INFRA
+  {
+    model: 'CCR2216-1G-12XS-2XQ',
+    vendor: 'Mikrotik',
+    type: DeviceType.CORE_ROUTER,
+    ports: [
+      { count: 1, type: 'ether', prefix: 'ether', speed: '1Gbps' },
+      { count: 12, type: 'sfp28', prefix: 'sfp-sfpplus', speed: '25Gbps' },
+      { count: 2, type: 'qsfp28', prefix: 'qsfp28-', speed: '100Gbps' }
+    ],
+    description: 'High performance Core Router with 100G support'
+  },
+  {
+    model: 'CCR2116-12G-4S+',
+    vendor: 'Mikrotik',
+    type: DeviceType.CORE_ROUTER,
+    ports: [
+      { count: 13, type: 'ether', prefix: 'ether', speed: '1Gbps' },
+      { count: 4, type: 'sfp+', prefix: 'sfp-sfpplus', speed: '10Gbps' }
+    ],
+    description: 'Powerful Core Router for distribution'
+  },
+  {
+    model: 'CCR2004-16G-2S+',
+    vendor: 'Mikrotik',
+    type: DeviceType.CORE_ROUTER,
+    ports: [
+      { count: 16, type: 'ether', prefix: 'ether', speed: '1Gbps' },
+      { count: 2, type: 'sfp+', prefix: 'sfp-sfpplus', speed: '10Gbps' }
+    ]
+  },
+  {
+    model: 'CRS354-48G-4S+2Q+RM',
+    vendor: 'Mikrotik',
+    type: DeviceType.SWITCH,
+    ports: [
+      { count: 48, type: 'ether', prefix: 'ether', speed: '1Gbps' },
+      { count: 4, type: 'sfp+', prefix: 'sfp-sfpplus', speed: '10Gbps' },
+      { count: 2, type: 'qsfp+', prefix: 'qsfp', speed: '40Gbps' }
+    ],
+    description: 'High density Switch for distribution'
+  },
+
+  // MIKROTIK - CORPORATE CLIENTS
+  {
+    model: 'RB5009UG+S+IN',
+    vendor: 'Mikrotik',
+    type: DeviceType.TPLINK, // Using TPLINK type for clients generally, but vendor is Mikrotik
+    ports: [
+      { count: 7, type: 'ether', prefix: 'ether', speed: '1Gbps' },
+      { count: 1, type: 'ether', prefix: 'ether', speed: '2.5Gbps' },
+      { count: 1, type: 'sfp+', prefix: 'sfp-sfpplus', speed: '10Gbps' }
+    ],
+    description: 'Powerful Router for Corporate Clients'
+  },
+  {
+    model: 'hAP ax3',
+    vendor: 'Mikrotik',
+    type: DeviceType.TPLINK,
+    ports: [
+      { count: 5, type: 'ether', prefix: 'ether', speed: '1Gbps' } // incl. WAN
+    ],
+    description: 'High performance WiFi 6 for business'
+  },
+
+  // TP-LINK - RESIDENTIAL CLIENTS
+  {
+    model: 'Archer AX10',
+    vendor: 'TP-Link',
+    type: DeviceType.TPLINK,
+    ports: [
+      { count: 1, type: 'wan', prefix: 'WAN', speed: '1Gbps' },
+      { count: 4, type: 'lan', prefix: 'LAN', speed: '1Gbps' }
+    ],
+    description: 'WiFi 6 Budget Friendly'
+  },
+  {
+    model: 'Archer C6',
+    vendor: 'TP-Link',
+    type: DeviceType.TPLINK,
+    ports: [
+      { count: 1, type: 'wan', prefix: 'WAN', speed: '1Gbps' },
+      { count: 4, type: 'lan', prefix: 'LAN', speed: '1Gbps' }
+    ],
+    description: 'Reliable WiFi 5 Router'
+  },
+  {
+    model: 'Archer AX50',
+    vendor: 'TP-Link',
+    type: DeviceType.TPLINK,
+    ports: [
+      { count: 1, type: 'wan', prefix: 'WAN', speed: '1Gbps' },
+      { count: 4, type: 'lan', prefix: 'LAN', speed: '1Gbps' }
+    ],
+    description: 'High performance WiFi 6'
+  },
+  {
+    model: 'Deco X20',
+    vendor: 'TP-Link',
+    type: DeviceType.TPLINK,
+    ports: [
+      { count: 2, type: 'ether', prefix: 'Port', speed: '1Gbps' }
+    ],
+    description: 'Mesh WiFi System'
+  },
+
+  // SPLITTERS - PASSIVE
+  {
+    model: 'Splitter PLC 1:2',
+    vendor: 'Generic',
+    type: DeviceType.SPLITTER,
+    ports: [
+      { count: 1, type: 'fiber', prefix: 'IN', speed: 'Passive' },
+      { count: 2, type: 'fiber', prefix: 'OUT', speed: 'Passive' }
+    ],
+    description: 'Passive Optical Splitter 1:2'
+  },
+  {
+    model: 'Splitter PLC 1:4',
+    vendor: 'Generic',
+    type: DeviceType.SPLITTER,
+    ports: [
+      { count: 1, type: 'fiber', prefix: 'IN', speed: 'Passive' },
+      { count: 4, type: 'fiber', prefix: 'OUT', speed: 'Passive' }
+    ],
+    description: 'Passive Optical Splitter 1:4'
+  },
+  {
+    model: 'Splitter PLC 1:8',
+    vendor: 'Generic',
+    type: DeviceType.SPLITTER,
+    ports: [
+      { count: 1, type: 'fiber', prefix: 'IN', speed: 'Passive' },
+      { count: 8, type: 'fiber', prefix: 'OUT', speed: 'Passive' }
+    ],
+    description: 'Passive Optical Splitter 1:8'
+  },
+  {
+    model: 'Splitter PLC 1:16',
+    vendor: 'Generic',
+    type: DeviceType.SPLITTER,
+    ports: [
+      { count: 1, type: 'fiber', prefix: 'IN', speed: 'Passive' },
+      { count: 16, type: 'fiber', prefix: 'OUT', speed: 'Passive' }
+    ],
+    description: 'Passive Optical Splitter 1:16'
+  }
+];
 
 const now = Date.now();
 
@@ -155,7 +305,7 @@ export const INITIAL_DEVICES: NetworkDevice[] = [
     statusChangedAt: now - 1054800000,
     trafficIn: 65000,
     trafficOut: 31000,
-    links: ['s2-sw', 's2-odf'],
+    links: ['s2-sw', 'splitter-01', 'splitter-02'],
     firmware: 'V2.1.0',
     siteId: 'site-2',
     siteName: 'Nodo Norte'
@@ -173,7 +323,43 @@ export const INITIAL_DEVICES: NetworkDevice[] = [
     statusChangedAt: now - 1054800000,
     trafficIn: 0,
     trafficOut: 0,
-    links: ['s2-olt', 'client-01', 'client-fault', 'client-suspended', 'client-cancelled-01'],
+    links: ['s2-olt'],
+    firmware: 'Passive',
+    siteId: 'site-2',
+    siteName: 'Nodo Norte'
+  },
+  {
+    id: 'splitter-01',
+    name: 'Splitter 1:8 - A',
+    model: 'PLC Splitter 1:8',
+    ip: 'N/A',
+    mac: 'N/A',
+    type: DeviceType.SPLITTER,
+    status: ConnectionStatus.ONLINE,
+    latency: 0,
+    uptime: 'N/A',
+    statusChangedAt: now,
+    trafficIn: 0,
+    trafficOut: 0,
+    links: ['s2-olt', 'client-01', 'client-fault'],
+    firmware: 'Passive',
+    siteId: 'site-2',
+    siteName: 'Nodo Norte'
+  },
+  {
+    id: 'splitter-02',
+    name: 'Splitter 1:8 - B',
+    model: 'PLC Splitter 1:8',
+    ip: 'N/A',
+    mac: 'N/A',
+    type: DeviceType.SPLITTER,
+    status: ConnectionStatus.ONLINE,
+    latency: 0,
+    uptime: 'N/A',
+    statusChangedAt: now,
+    trafficIn: 0,
+    trafficOut: 0,
+    links: ['s2-olt', 'client-suspended', 'client-cancelled-01'],
     firmware: 'Passive',
     siteId: 'site-2',
     siteName: 'Nodo Norte'
@@ -195,7 +381,7 @@ export const INITIAL_DEVICES: NetworkDevice[] = [
     contractedOut: 150,
     consumedIn: 45800, // 45.8 GB
     consumedOut: 12400, // 12.4 GB
-    links: ['s2-odf'],
+    links: ['splitter-01'],
     firmware: 'TP-Link 1.3.6',
     siteId: 'site-2',
     siteName: 'Nodo Norte'
@@ -217,7 +403,7 @@ export const INITIAL_DEVICES: NetworkDevice[] = [
     contractedOut: 50,
     consumedIn: 2100,
     consumedOut: 800,
-    links: ['s2-odf'],
+    links: ['splitter-01'],
     firmware: 'TP-Link 2.0.1',
     siteId: 'site-2',
     siteName: 'Nodo Norte'
@@ -239,7 +425,7 @@ export const INITIAL_DEVICES: NetworkDevice[] = [
     contractedOut: 500,
     consumedIn: 89000,
     consumedOut: 45000,
-    links: ['s2-odf'],
+    links: ['splitter-02'],
     firmware: 'TP-Link 1.1.0',
     siteId: 'site-2',
     siteName: 'Nodo Norte'
@@ -261,7 +447,7 @@ export const INITIAL_DEVICES: NetworkDevice[] = [
     contractedOut: 25,
     consumedIn: 0,
     consumedOut: 0,
-    links: ['s2-odf'],
+    links: ['splitter-02'],
     firmware: 'TP-Link 1.0.0',
     siteId: 'site-2',
     siteName: 'Nodo Norte'

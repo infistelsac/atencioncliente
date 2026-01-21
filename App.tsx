@@ -11,6 +11,7 @@ import VisitScheduler from './components/VisitScheduler';
 import TicketsModule, { Ticket, ADMIN_MOCK_TICKETS } from './components/TicketsModule';
 import MonitoringDashboard from './components/monitoring/MonitoringDashboard';
 import Login from './components/Login';
+import PrivacyPolicy from './components/PrivacyPolicy';
 import { View, Agent, AgentStatus, DashboardStats, Conversation, MessageType, Contact, Group } from './types';
 import { GroupManager } from './components/GroupManager';
 import { Phone, Video, Mic, MicOff, VideoOff, X } from 'lucide-react';
@@ -162,6 +163,10 @@ const App: React.FC = () => {
     localStorage.removeItem('infistel_auth_token');
     setIsAuthenticated(false);
     setCurrentView('dashboard'); // Reset view on logout
+  };
+
+  const handleViewPrivacy = () => {
+    setCurrentView('privacy');
   };
 
   // Badge Logic
@@ -438,13 +443,21 @@ const App: React.FC = () => {
         return <Settings />;
       case 'monitoring':
         return <MonitoringDashboard />;
+      case 'privacy':
+        return <PrivacyPolicy onBack={() => {
+          if (isAuthenticated) {
+            setCurrentView('dashboard');
+          } else {
+            setCurrentView('dashboard'); // Case handled by auth logic returning Login
+          }
+        }} />;
       default:
         return <Dashboard stats={MOCK_STATS} />;
     }
   };
 
-  if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
+  if (!isAuthenticated && currentView !== 'privacy') {
+    return <Login onLogin={handleLogin} onViewPrivacy={handleViewPrivacy} />;
   }
 
   return (
