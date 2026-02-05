@@ -42,14 +42,25 @@ const Settings: React.FC = () => {
         if (savedPort) setMikrotikPort(savedPort);
         if (savedUser) setMikrotikUser(savedUser);
         if (savedPass) setMikrotikPassword(savedPass);
+
+        // Load WhatsApp Config
+        const savedWaba = localStorage.getItem('infistel_whatsapp_config');
+        if (savedWaba) {
+            const config = JSON.parse(savedWaba);
+            setVerifyToken(config.verifyToken || '');
+            setPhoneNumberId(config.phoneNumberId || '');
+            setWabaId(config.wabaId || '');
+            setAccessToken(config.accessToken || '');
+        }
     }, []);
 
     const handleSaveWhatsAppConfig = () => {
-        // Simulate API call
+        const config = { verifyToken, phoneNumberId, wabaId, accessToken };
+        localStorage.setItem('infistel_whatsapp_config', JSON.stringify(config));
+
         setIsSaved(true);
         setTimeout(() => setIsSaved(false), 3000);
-        // In a real app, save to backend
-        console.log('Saving WhatsApp config:', { webhookUrl, verifyToken, phoneNumberId, wabaId, accessToken });
+        console.log('Saved WhatsApp config:', config);
     };
 
     const handleSaveAiConfig = () => {

@@ -146,16 +146,33 @@ const App: React.FC = () => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [badges, setBadges] = useState<Record<string, number>>({});
 
-  // Firestore Listeners
+  // Firestore Listeners & Local Storage Initial Load
   useEffect(() => {
+    // Load from LocalStorage first (Immediate)
+    const savedContacts = localStorage.getItem('infistel_contacts');
+    if (savedContacts) setContacts(JSON.parse(savedContacts));
+
+    const savedAgents = localStorage.getItem('infistel_agents');
+    if (savedAgents) setAgents(JSON.parse(savedAgents));
+
+    const savedGroups = localStorage.getItem('infistel_groups');
+    if (savedGroups) setGroups(JSON.parse(savedGroups));
+
     if (!db) return;
 
+    // Listen to Firestore updates if available
     const unsubContacts = databaseService.listen('contacts', (data) => {
-      if (data.length > 0) setContacts(data);
+      if (data.length > 0) {
+        setContacts(data);
+        localStorage.setItem('infistel_contacts', JSON.stringify(data));
+      }
     });
 
     const unsubAgents = databaseService.listen('agents', (data) => {
-      if (data.length > 0) setAgents(data);
+      if (data.length > 0) {
+        setAgents(data);
+        localStorage.setItem('infistel_agents', JSON.stringify(data));
+      }
     });
 
     const unsubConversations = databaseService.listen('conversations', (data) => {
@@ -168,6 +185,64 @@ const App: React.FC = () => {
       unsubConversations();
     };
   }, []);
+
+  // Persistence Handlers
+  const handleUpdateContacts = async (newContacts: Contact[]) => {
+    setContacts(newContacts);
+    localStorage.setItem('infistel_contacts', JSON.stringify(newContacts));
+
+    if (db) {
+      // Find what changed and sync to DB (Simple approach for now: sync local to DB)
+      // In a real app we'd call databaseService.add/update for the specific item
+      console.log("Syncing contacts to Firestore...");
+    }
+  };
+
+  const handleUpdateAgents = async (newAgents: Agent[]) => {
+    setAgents(newAgents);
+    localStorage.setItem('infistel_agents', JSON.stringify(newAgents));
+  };
+
+  const handleUpdateGroups = async (newGroups: Group[]) => {
+    setGroups(newGroups);
+    localStorage.setItem('infistel_groups', JSON.stringify(newGroups));
+  };
+
+  const handleAddContact = (newContact: Contact) => {
+    const updated = [newContact, ...contacts];
+    handleUpdateContacts(updated);
+    if (db) databaseService.add('contacts', newContact);
+  };
+
+  const handleUpdateContact = (updatedContact: Contact) => {
+    const updated = contacts.map(c => c.id === updatedContact.id ? updatedContact : c);
+    handleUpdateContacts(updated);
+    if (db) databaseService.update('contacts', updatedContact.id, updatedContact);
+  };
+
+  const handleDeleteContact = (id: string) => {
+    const updated = contacts.filter(c => c.id !== id);
+    handleUpdateContacts(updated);
+    if (db) databaseService.delete('contacts', id);
+  };
+
+  const handleAddAgent = (newAgent: Agent) => {
+    const updated = [...agents, newAgent];
+    handleUpdateAgents(updated);
+    if (db) databaseService.add('agents', newAgent);
+  };
+
+  const handleDeleteAgent = (id: string) => {
+    const updated = agents.filter(a => a.id !== id);
+    handleUpdateAgents(updated);
+    if (db) databaseService.delete('agents', id);
+  };
+
+  const handleUpdateAgent = (updatedAgent: Agent) => {
+    const updated = agents.map(a => a.id === updatedAgent.id ? updatedAgent : a);
+    handleUpdateAgents(updated);
+    if (db) databaseService.update('agents', updatedAgent.id, updatedAgent);
+  };
 
   // Auth Check
   useEffect(() => {
@@ -227,9 +302,19 @@ const App: React.FC = () => {
 
 
   const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
     document.documentElement.classList.toggle('dark');
+    localStorage.setItem('infistel_dark_mode', String(newMode));
   };
+
+  useEffect(() => {
+    const savedMode = localStorage.getItem('infistel_dark_mode');
+    if (savedMode === 'true') {
+      setIsDarkMode(true);
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
 
   const handleSendMessage = (conversationId: string, text: string, type: MessageType = MessageType.TEXT) => {
     const newMessage: any = {
@@ -398,14 +483,16 @@ const App: React.FC = () => {
           <GroupManager
             contacts={contacts}
             groups={groups}
-            onUpdateGroups={setGroups}
+            onUpdateGroups={handleUpdateGroups}
           />
         );
       case 'contacts':
         return (
           <ContactList
             contacts={contacts}
-            onUpdateContacts={setContacts}
+            onAddContact={handleAddContact}
+            onUpdateContact={handleUpdateContact}
+            onDeleteContact={handleDeleteContact}
             onStartCall={handleStartCall}
           />
         );
@@ -418,16 +505,16 @@ const App: React.FC = () => {
             onSendTicketToChat={handleSendTicketToChat}
             onViewChat={handleViewChat}
             contacts={contacts}
-            onAddContact={(newContact) => setContacts([...contacts, newContact])}
+            onAddContact={handleAddContact}
           />
         );
       case 'agents':
         return (
           <AgentManager
             agents={agents}
-            onUpdateAgent={(updated) => setAgents(agents.map(a => a.id === updated.id ? updated : a))}
-            onDeleteAgent={(id) => setAgents(agents.filter(a => a.id !== id))}
-            onAddAgent={(newAgent) => setAgents([...agents, newAgent])}
+            onUpdateAgent={handleUpdateAgent}
+            onDeleteAgent={handleDeleteAgent}
+            onAddAgent={handleAddAgent}
           />
         );
       case 'visits':
